@@ -1,0 +1,13 @@
+[global]
+name=btrfs-raid1-randread
+filename=btrfs-raid1-randread
+rw=randread
+bs=64k
+direct=1
+numjobs=1
+time_based=1
+runtime=9000
+
+[file1]
+size=10G
+ioengine=libaio

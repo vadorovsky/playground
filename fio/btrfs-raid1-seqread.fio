@@ -4,10 +4,10 @@ filename=btrfs-raid1-seqread
 rw=read
 bs=64k
 direct=1
-numjobs=1
+numjobs=8
 time_based=1
 runtime=900
 
 [file1]
-size=10G
+size=50G
 ioengine=libaio

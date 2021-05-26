@@ -2,8 +2,25 @@
 #include "lsm.skel.h"
 
 #define PIN_PATH "/sys/fs/bpf/lsm_fs"
+#define PIN_LINK_PATH "/sys/fs/bpf/lsm_fs_link"
 
-int main(int argc, char **argv) {
+int remove_file_if_exists(const char *path)
+{
+	int err = 0;
+
+	if (access(path, F_OK) == 0) {
+		err = remove(path);
+		if (err != 0) {
+			fprintf(stdout, "could not remove old pin: %d", err);
+			return err;
+		}
+	}
+
+	return err;
+}
+
+int main(int argc, char **argv)
+{
 	struct lsm_bpf *prog;
 	int err = 0;
 
@@ -11,13 +28,12 @@ int main(int argc, char **argv) {
 	if (!prog)
 		fprintf(stdout, "could not load bpf program");
 
-	if (access(PIN_PATH, F_OK) == 0) {
-		err = remove(PIN_PATH);
-		if (err != 0) {
-			fprintf(stdout, "could not remove old pin: %d", err);
-			goto out;
-		}
-	}
+
+	if (remove_file_if_exists(PIN_PATH))
+		goto out;
+	if (remove_file_if_exists(PIN_LINK_PATH))
+		goto out;
+
 	err = bpf_program__pin(prog->progs.open_audit,
 			       PIN_PATH);
 	if (err) {
@@ -31,11 +47,12 @@ int main(int argc, char **argv) {
 		goto out;
 	}
 
-	/*
-	 * After we finish sleeping and the userspace program quits,
-	 * the BPF program doesn't get triggered anymore.
-	 */
-	sleep(30);
+	err = bpf_link__pin(prog->links.open_audit,
+			    PIN_LINK_PATH);
+	if (err) {
+		fprintf(stdout, "could not attach link: %d", err);
+		goto out;
+	}
 
 out:
 	lsm_bpf__destroy(prog);
